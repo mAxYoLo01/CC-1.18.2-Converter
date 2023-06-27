@@ -25,6 +25,8 @@ import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.StringTag;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileWriter;
@@ -429,15 +431,24 @@ public class RegionConverter extends Thread {
 
             //Add them to the json file.
             for (CompoundTag entity : entities) {
+                JSONObject jo;
 
-                JSONObject jo = new JSONObject();
-                jo.put("id", entity.getString("id"));
+                if (entity.getString("id").equals("minecraft:armor_stand")) {
+                    try {
+                        jo = (JSONObject)new JSONParser().parse(entity.toString());
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                        continue;
+                    }
+                } else {
+                    jo = new JSONObject();
+                    jo.put("id", entity.getString("id"));
 
-                ListTag<DoubleTag> pos = (ListTag<DoubleTag>) entity.getListTag("Pos");
-
-                jo.put("x", pos.get(0).asDouble());
-                jo.put("y", pos.get(1).asDouble());
-                jo.put("z", pos.get(2).asDouble());
+                    ListTag<DoubleTag> pos = (ListTag<DoubleTag>) entity.getListTag("Pos");
+                    jo.put("x", pos.get(0).asDouble());
+                    jo.put("y", pos.get(1).asDouble());
+                    jo.put("z", pos.get(2).asDouble());
+                }
 
                 jaEntities.add(jo);
             }
