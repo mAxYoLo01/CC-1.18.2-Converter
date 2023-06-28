@@ -432,22 +432,11 @@ public class RegionConverter extends Thread {
             //Add them to the json file.
             for (CompoundTag entity : entities) {
                 JSONObject jo;
-
-                if (entity.getString("id").equals("minecraft:armor_stand")) {
-                    try {
-                        jo = (JSONObject)new JSONParser().parse(entity.toString());
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                        continue;
-                    }
-                } else {
-                    jo = new JSONObject();
-                    jo.put("id", entity.getString("id"));
-
-                    ListTag<DoubleTag> pos = (ListTag<DoubleTag>) entity.getListTag("Pos");
-                    jo.put("x", pos.get(0).asDouble());
-                    jo.put("y", pos.get(1).asDouble());
-                    jo.put("z", pos.get(2).asDouble());
+                try {
+                    jo = (JSONObject)new JSONParser().parse(entity.toString());
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                    continue;
                 }
 
                 jaEntities.add(jo);
