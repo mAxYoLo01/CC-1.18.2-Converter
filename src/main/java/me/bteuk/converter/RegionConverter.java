@@ -106,9 +106,6 @@ public class RegionConverter extends Thread {
         this.queue = queue;
         this.mng = mng;
 
-        //Create json array to store entities.
-        jaEntities = new JSONArray();
-
     }
 
     /**
@@ -125,12 +122,14 @@ public class RegionConverter extends Thread {
                     mng.activeThreads.decrementAndGet();
 
                     //Write entities file.
-                    FileWriter ppFile = new FileWriter(mng.itr.output.resolve("entities") + "/" + uuid + ".json");
-                    ppFile.write(jaEntities.toJSONString());
-                    ppFile.flush();
-                    ppFile.close();
+                    //FileWriter ppFile = new FileWriter(mng.itr.output.resolve("entities") + "/" + uuid + ".json");
+                    //ppFile.write(jaEntities.toJSONString());
+                    //ppFile.flush();
+                    //ppFile.close();
                     break;
                 }
+
+
 
                 try {
                     convert();
@@ -143,9 +142,9 @@ public class RegionConverter extends Thread {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        } catch (IOException e) {
+        }/* catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     /**
@@ -158,6 +157,8 @@ public class RegionConverter extends Thread {
 
         //Create new json array to store blocks for post-processing in.
         ja = new JSONArray();
+        //Create json array to store entities.
+        jaEntities = new JSONArray();
 
         //Iterate through all possible chunk columns in the file and continue with any that contain data.
         //A region2d is 512x512 which is 32*32 in terms of chunks, so 1024 individual chunks to iterate.
@@ -171,7 +172,11 @@ public class RegionConverter extends Thread {
 
             //Write the json array to a file.
             FileWriter ppFile = new FileWriter(mng.itr.output.resolve("post-processing") + "/" + file.replace(".2dr", ".json"));
-            ppFile.write(ja.toJSONString());
+            JSONObject postProcObj = new JSONObject();
+            postProcObj.put("block", ja);
+            if(!jaEntities.isEmpty())
+                postProcObj.put("entity", jaEntities);
+            ppFile.write(postProcObj.toJSONString());
             ppFile.flush();
             ppFile.close();
 
@@ -431,15 +436,7 @@ public class RegionConverter extends Thread {
 
             //Add them to the json file.
             for (CompoundTag entity : entities) {
-                JSONObject jo;
-                try {
-                    jo = (JSONObject)new JSONParser().parse(entity.toString());
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                    continue;
-                }
-
-                jaEntities.add(jo);
+                convertEntity(entity);
             }
 
             //Load tile entities.
@@ -447,9 +444,7 @@ public class RegionConverter extends Thread {
 
             //Convert each block in the chunk individually.
             for (int j = 0; j < 4096; j++) {
-
                 convertBlock(y, j);
-
             }
 
             //Convert the list of unique blocks to a 1.18.2 block palette.
@@ -460,6 +455,9 @@ public class RegionConverter extends Thread {
             for (LegacyID id : uniqueBlocks) {
                 //Store the index of this block, so we can easily reference it
                 // from the palette without having the convert it again.
+                if(id.equals((byte) -60, (byte) 4)){
+                    String w = "2";
+                }
                 paletteID.put(id, counter);
                 counter++;
                 palette.add(MinecraftIDConverter.getBlock(id));
@@ -541,6 +539,7 @@ public class RegionConverter extends Thread {
             cZ = (j - (cY * 256)) / 16;
             cX = j - (cY * 256) - (cZ * 16);
 
+
             //Find the tile entity from the list.
             if (MinecraftIDConverter.isBlockEntity(blocks[j])) {
 
@@ -582,12 +581,10 @@ public class RegionConverter extends Thread {
                 if (MinecraftIDConverter.hasProperties(blocks[j])) {
                     //If it's a block entity.
                     if (MinecraftIDConverter.isBlockEntity(blocks[j])) {
-
                         //Add the properties.
                         obj.put("properties", MinecraftIDConverter.getProperties(blocks[j], meta, tEntity));
 
                     } else {
-
                         //Add the properties
                         obj.put("properties", MinecraftIDConverter.getProperties(blocks[j], meta, null));
 
@@ -714,5 +711,22 @@ public class RegionConverter extends Thread {
                 )
         ));
         save.save(new MinecraftChunkLocation(entryX, entryZ, "mca"), data);
+    }
+
+    /**
+     * Convert the CompoundTag of entity to a 1.18.2+ suitable format, and add it to the entities JSON array
+     * @param entity The compound tag describing the entity
+     */
+    private void convertEntity(CompoundTag entity){
+        JSONObject jo;
+      
+        try {
+            jo = (JSONObject)new JSONParser().parse(entity.toString());
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        
+        jaEntities.add(jo);
+
     }
 }
